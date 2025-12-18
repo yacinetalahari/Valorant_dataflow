@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import random 
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -148,11 +149,10 @@ try:
     stats = list(db.realtime_stats.find({}, {'_id': 0}).limit(200))
 
     if not stats:
-        st.warning("⏳ Waiting for data stream... The pipeline is initializing.")
-        st.info("Please ensure the producer is running: `docker-compose restart producer`")
-        st.stop()
-
-    df = pd.DataFrame(stats)
+        st.warning("⏳ Running in DEMO mode with sample data")
+        df = get_demo_data()  # Utilise les données de démo
+    else:
+        df = pd.DataFrame(stats)
 
     # ========== TOP METRICS ROW ==========
     st.markdown('<div class="section-header"> KEY PERFORMANCE INDICATORS</div>', unsafe_allow_html=True)
