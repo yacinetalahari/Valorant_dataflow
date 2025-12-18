@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  # 1. Zookeeper (Requis pour Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  # 2. Kafka (Le Message Broker)
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    hostname: kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092" # Port interne pour la communication Docker
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+  # 3. MongoDB (La Base de Données)
+  
+  mongodb:
+    image: mongo:latest 
+    hostname: mongodb
+    container_name: mongodb
+    ports:
+    - "27017:27017"
+
+    volumes:
+      - mongodb_data:/data/db 
+
+
+  # 4. Producer Service (Lit le CSV et envoie à Kafka)
+  producer:
+    build:
+      context: ./producer
+    container_name: producer
+    volumes:
+      - ./data:/app/data 
+    depends_on:
+      - kafka
+    restart: on-failure
+    environment:
+      PYTHONUNBUFFERED: 1
+      KAFKA_BROKER: kafka:29092
+      KAFKA_TOPIC: valorant_stats_topic
+      
+  # 5. Spark Consumer Service (Lit Kafka, traite les données, écrit dans Mongo)
+ 
+  spark:
+    build:
+      context: ./spark
+    container_name: spark-consumer
+    depends_on:
+    - kafka
+    - mongodb
+    environment:
+      SPARK_MODE: master
+      
+  # 6. Streamlit Dashboard (Visualisation)
+  streamlit:
+    build:
+      context: ./streamlit
+    container_name: streamlit-dashboard
+    ports:
+      - "8501:8501"
+    depends_on:
+      - mongodb
+    environment:
+      MONGO_URI: mongodb://admin:valorant123@mongodb:27017
+    volumes:
+      - ./streamlit:/app
+
+  # 7. Kafka UI (Monitoring - Bonus)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+
+volumes:
+  mongodb_data:
