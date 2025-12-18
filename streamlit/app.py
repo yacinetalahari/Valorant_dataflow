@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import random 
+import random
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -142,17 +142,24 @@ def get_mongo_client():
 
 
 try:
-    client = get_mongo_client()
-    db = client.valorant_stats
-
-    # Get data with error handling
-    stats = list(db.realtime_stats.find({}, {'_id': 0}).limit(200))
-
-    if not stats:
-        st.warning("⏳ Running in DEMO mode with sample data")
-        df = get_demo_data()  # Utilise les données de démo
-    else:
-        df = pd.DataFrame(stats)
+    # Essaye d'abord le fichier CSV local
+    try:
+        df = pd.read_csv("valorant_stats.csv")
+        st.success(f"✅ Loaded {len(df)} players from CSV")
+    except:
+        # Si pas de CSV, utilise les données de démo
+        st.info("🏆 Using demo data")
+        players = ["TenZ", "Scream", "yay", "Derke", "Aspas"]
+        data = []
+        for player in players:
+            data.append({
+                'player': player,
+                'kd_ratio': round(1.5 + random.random(), 2),
+                'headshot_percentage': round(30 + random.random()*15, 1),
+                'kills': random.randint(15, 30),
+                'deaths': random.randint(8, 20)
+            })
+        df = pd.DataFrame(data)
 
     # ========== TOP METRICS ROW ==========
     st.markdown('<div class="section-header"> KEY PERFORMANCE INDICATORS</div>', unsafe_allow_html=True)
