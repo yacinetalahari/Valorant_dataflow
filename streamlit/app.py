@@ -120,12 +120,7 @@ with col_title1:
 
 with col_title3:
     # System status indicator
-    try:
-        client = MongoClient("mongodb://mongodb:27017", serverSelectionTimeoutMS=3000)
-        client.server_info()
-        st.success("✅ System Active")
-    except:
-        st.error("⚠️ System Offline")
+    st.success("✅ Dashboard Active")
 
 
 # ========== MAIN DASHBOARD ==========
